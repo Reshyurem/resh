@@ -5,8 +5,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/poll.h>
 #include <unistd.h>
 #include <limits.h>
+#include <fcntl.h>
 #include <string.h>
 #include <signal.h>
 #include <ctype.h>
@@ -31,6 +33,12 @@ void shell();
 
 void child_terminate(int signal);
 
+void shell_close(int signal);
+
+void fg_to_bg_handler(int signal);
+
+void ctrl_C_handler(int signal);
+
 // command_processing.c Functions
 
 void command_process(char command[]);
@@ -43,9 +51,17 @@ void pwd_command();
 
 void repeat_command(char **argument, int no_of_parts);
 
-void bg_command(char **argument);
+void bg_command(char **argument, int no_of_parts);
 
 void fg_command(char **argument, int no_of_parts);
+
+void make_fg_command(int proc);
+
+void make_bg_command(int proc);
+
+void jobs_command(char **argument, int no_of_parts);
+
+void sig_command(int proc, int signal);
 
 // technical_functions.c Functions
 
@@ -56,6 +72,8 @@ char *combination(char **argument, int start_part, int end_part);
 void backspace(char temp_string[], int *position);
 
 char *input_line();
+
+int quitter(int sleep_period);
 
 void rel_path(char *path);
 
@@ -68,6 +86,8 @@ void freemem(char ***mem, int no);
 // pinfo.c Functions
 
 void pinfo_command(int pid);
+
+int search_state(int pid);
 
 // rawmode.c Functions
 
@@ -88,8 +108,10 @@ void list_form(char *path, char *name, int df);
 typedef struct Background_Processes
 {
     int pid;
+    int pos;
     char *process_name;
     struct Background_Processes *next;
+    struct Background_Processes *prev;
 } bgp;
 
 typedef struct History
@@ -113,14 +135,29 @@ void history_storage();
 
 void history_retrieval();
 
+// bripe.c Functions
+
+void bripe(char* command);
+
+// replay.c Functions
+
+void action_replay(char **argument, int no_of_parts);
+
 // Global Variables
 
 extern char username[1024];
 extern char systemname[1024];
 extern char home_dir[1024];
 extern char prev_dir[1024];
-extern bgp *bgp_list;
+extern bgp *bgp_start;
+extern bgp *bgp_end;
 extern his *his_start;
 extern his *his_end;
 extern int his_count;
+extern int bgp_count;
+extern int fg_proc;
+extern char* fg_proc_name;
+extern char colorCode;
+extern int parent;
+extern int baywatch;
 #endif

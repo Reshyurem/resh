@@ -9,6 +9,7 @@ void shell_setup()
     strcpy(username, getenv("USER"));
     // getlogin_r(username, 1024);
     getcwd(home_dir, 1024);
+    parent = getpid();
     history_retrieval();
 }
 
@@ -17,7 +18,7 @@ void shell_prompt()
     char cwd[1024];
     getcwd(cwd, 1024);
     rel_path(cwd);
-    printf("\e[0;96m<%s@%s:\e[1;34m%s\e[0;96m>\e[0m", username, systemname, cwd);
+    printf("\e[0;96m<%s@%s:\e[1;34m%s\e[0;96m> \e[0m", username, systemname, cwd);
     // int home_length, current_length;
     // home_length = strlen(home_dir);
     // current_length = strlen(cwd);
@@ -47,7 +48,7 @@ void child_terminate(int signal)
 {
     int status;
     pid_t wpid = waitpid(-1, &status, WNOHANG);
-    if (wpid > 0)
+    if (wpid > 0 && wpid != fg_proc)
     {
         char *name = get_process_name(wpid);
         if (WIFEXITED(status))
@@ -67,6 +68,29 @@ void child_terminate(int signal)
     }
 }
 
+void fg_to_bg_handler(int signal)
+{
+    if (fg_proc != 0)
+    {
+        add_bgp_node(fg_proc, fg_proc_name);
+        kill(fg_proc, 20);
+        printf("\r");
+    }
+}
+
+void ctrl_C_handler(int signal)
+{
+    if (fg_proc != 0)
+    {
+        kill(fg_proc, 2);
+        printf("\r");
+    }
+}
+
+// void vim_handler(int signal){
+//     command_process("gedit");
+// }
+
 void shell()
 {
     char individual_command[1024];
@@ -74,14 +98,29 @@ void shell()
     char *commands;
     int i = 0, no_of_commands;
     size_t input_size = 0;
-    signal(SIGCHLD, child_terminate);
-    // struct sigaction action;
+    // signal(SIGCHLD, child_terminate);
+    // signal(SIGTTIN, vim_handler);
+    // signal(SIGTTOU, vim_handler);
+    // signal(SIGTTOU, shell_close);
+    // struct sigaction child, fg_to_bg, ctrl_C;
     shell_setup();
 
-    // action.sa_handler = child_terminate;
-    // sigemptyset(&action.sa_mask);
-    // sigaction(SIGCHLD, &action, NULL);
+    // child.sa_handler = child_terminate;
+    // sigemptyset(&child.sa_mask);
+    // sigaction(SIGCHLD, &child, NULL);
+
+    // fg_to_bg.sa_handler = fg_to_bg_handler;
+    // sigemptyset(&fg_to_bg.sa_mask);
+    // sigaction(SIGTSTP, &fg_to_bg, NULL);
+
+    // ctrl_C.sa_handler = ctrl_C_handler;
+    // sigemptyset(&ctrl_C.sa_mask);
+    // sigaction(SIGINT, &ctrl_C, NULL);
+
     signal(SIGCHLD, child_terminate);
+    signal(SIGTSTP, fg_to_bg_handler);
+    signal(SIGINT, ctrl_C_handler);
+
     strcpy(prev_dir, home_dir);
     while (1)
     {
@@ -110,7 +149,8 @@ void shell()
         char **commands = parse(input, ";", &no_of_commands);
         for (i = 0; i < no_of_commands; i++)
         {
-            command_process(commands[i]);
+            bripe(commands[i]);
+            // command_process(commands[i]);
         }
         freemem(&commands, no_of_commands);
     }

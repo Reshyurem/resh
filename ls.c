@@ -66,14 +66,24 @@ void ls_command(int a_flag, int l_flag, int mul_flag, char *dir)
     {
         if (access(dir, F_OK) == 0)
         {
+            if (colorCode == 0)
+            {
+                printf("\e[0;32m");
+            }
             if (l_flag)
             {
                 if (mul_flag > 0)
-                    printf("\e[0;32m%s:\n", dir);
+                {
+                    printf("%s:\n", dir);
+                }
                 list_form(dir, dir, 0);
             }
             else
-                printf("\e[0;32m%s\n\e[0m", dir);
+                printf("%s\n", dir);
+            if (colorCode == 0)
+            {
+                printf("\e[0m");
+            }
         }
         else
         {
@@ -91,27 +101,41 @@ void ls_command(int a_flag, int l_flag, int mul_flag, char *dir)
             lstat(directory_item->d_name, &stat_buf);
             block_size += stat_buf.st_blocks;
         }
+
+        if (colorCode == 0)
+        {
+            printf("\e[0;34m");
+        }
+
         if (mul_flag > 0)
-            printf("\e[0;34m%s:\n", dir);
+            printf("%s:\n", dir);
         if (l_flag)
             printf("total %ld\n", block_size / 2);
+
+        if (colorCode == 0)
+        {
+            printf("\e[0m");
+        }
 
         closedir(directory);
 
         directory = opendir(dir);
-
+        if (colorCode == 0)
+        {
+            printf("\e[0;32m");
+        }
         while (directory_item = readdir(directory))
         {
             if (directory_item->d_name[0] == '.' && !a_flag)
                 continue;
             if (l_flag)
-            {
-                printf("\e[0;32m");
                 list_form(dir, directory_item->d_name, 1);
-            }
             else
-                printf("\e[0;32m%s\n", directory_item->d_name);
+                printf("%s\n", directory_item->d_name);
         }
-        printf("\e[0m");
+        if (colorCode == 0)
+        {
+            printf("\e[0m");
+        }
     }
 }

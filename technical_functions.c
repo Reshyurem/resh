@@ -45,6 +45,7 @@ char *combination(char **argument, int start_part, int end_part)
         strcat(temp, argument[i]);
         strcat(temp, " ");
     }
+    temp[strlen(temp) - 1] = '\0';
     return strdup(temp);
 }
 
@@ -108,6 +109,7 @@ char *input_line()
                 {
                     if (buf[0] == 91 && buf[1] == 65)
                     {
+                        // printf("[%d%d%d]\n", c, buf[0], buf[1]);
                         while (x > 0)
                         {
                             backspace(temp_string, &x);
@@ -214,4 +216,65 @@ char *input_line()
     //     strcpy(return_string, temp_string);
     //     return return_string;
     // }
+}
+
+int quitter(int sleeper)
+{
+    char c;
+    int ret;
+    int i = 1;
+    clock_t current = clock();
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+    setbuf(stdout, NULL);
+    enableRawMode();
+    struct pollfd pfds;
+    pfds.fd = STDIN_FILENO;
+    pfds.events = POLLIN;
+    while (1)
+    {
+        if (clock() - current > 1000000 * sleeper)
+        {
+            // FILE *fp;
+            // fp = fopen("/proc/meminfo", "r");
+            // if (fp != NULL)
+            // {
+            //     char **stats;
+            //     char *buf = (char *)malloc(1800);
+            //     int no_of_parts, len, bufsize = 1800;
+            //     fread(buf, sizeof(char), sizeof(buf), fp);
+            //     printf("%s", buf);
+            //     stats = parse(buf, " \n", &no_of_parts);
+            //     for(int i = 0; i < no_of_parts; i++){
+            //         // printf("%d", no_of_parts);
+            //         if(strcmp(stats[i], "Dirty:") == 0){
+            //             printf("%s %s\n", stats[i + 1], stats[i + 2]);
+            //             break;
+            //         }
+            //     }
+            //     free(buf);
+            //     freemem(&stats, no_of_parts);
+            //     fclose(fp);
+            bripe("cat /proc/meminfo | grep Dirty:");
+            // }
+            // else
+            // {
+            //     perror("\e[0;91mFile Opening");
+            //     fprintf(stderr, "\e[0m");
+            //     break;
+            // }
+            current = clock();
+        }
+        if (read(STDIN_FILENO, &c, 1) == 1)
+        {
+            if (c == 113)
+            {
+                break;
+            }
+        }
+    }
+    printf("\n");
+    disableRawMode();
+    fcntl(STDIN_FILENO, F_SETFL, flags);
+    return ret;
 }

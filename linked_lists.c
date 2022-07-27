@@ -2,59 +2,86 @@
 
 void add_bgp_node(int pid, char *process_name)
 {
-    bgp *bgp_node = (bgp *)calloc(1, sizeof(bgp));
+    bgp *bgp_node = (bgp *)calloc(1, sizeof(bgp)), *traversal_node;
+    int max = 0;
+    traversal_node = bgp_start;
+    while (traversal_node != NULL)
+    {
+        if (traversal_node->pos > max)
+            max = traversal_node->pos;
+        traversal_node = traversal_node->next;
+    }
+    if (max < bgp_count)
+    {
+        bgp_count = max;
+    }
     bgp_node->pid = pid;
+    bgp_count++;
+    bgp_node->pos = bgp_count;
     bgp_node->process_name = strdup(process_name);
     bgp_node->next = NULL;
-    if (bgp_list == NULL)
+    bgp_node->prev = NULL;
+
+    if (bgp_start == NULL)
     {
-        bgp_list = bgp_node;
+        bgp_start = bgp_node;
+        bgp_end = bgp_node;
+    }
+    else if (bgp_start == bgp_end)
+    {
+        if (strcmp(bgp_start->process_name, process_name) <= 0)
+        {
+            bgp_end = bgp_node;
+            bgp_start->next = bgp_end;
+            bgp_end->prev = bgp_start;
+        }
+        else
+        {
+            bgp_start = bgp_node;
+            bgp_start->next = bgp_end;
+            bgp_end->prev = bgp_start;
+        }
     }
     else
     {
-        bgp_node->next = bgp_list;
-        bgp_list = bgp_node;
+        traversal_node = bgp_end;
+        while (traversal_node != NULL)
+        {
+            if (strcmp(traversal_node->process_name, process_name) > 0)
+            {
+                if (traversal_node->prev == NULL)
+                {
+                    bgp_node->next = traversal_node;
+                    traversal_node->prev = bgp_node;
+                    bgp_start = bgp_node;
+                    break;
+                }
+                else
+                {
+                    traversal_node = traversal_node->prev;
+                }
+            }
+            else
+            {
+                if (traversal_node->next != NULL)
+                {
+                    traversal_node->next->prev = bgp_node;
+                }
+                bgp_node->next = traversal_node->next;
+                traversal_node->next = bgp_node;
+                bgp_node->prev = traversal_node;
+                if(traversal_node == bgp_end){
+                    bgp_end = bgp_node;
+                }
+                break;
+            }
+        }
     }
-
-    // char *name = (char *)calloc(1024, sizeof(char));
-    // char *fname = (char *)calloc(1024, sizeof(char));
-    // if (name && fname)
-    // {
-    //     sprintf(name, "/proc/%d/cmdline", pid);
-    //     FILE *f;
-    //     f = fopen(name, "r");
-    //     if (f)
-    //     {
-    //         size_t size;
-    //         size = fread(fname, sizeof(char), 1024, f);
-    //         if (size > 0)
-    //         {
-    //             if ('\n' == fname[size - 1])
-    //                 fname[size - 1] = '\0';
-    //         }
-    //         fclose(f);
-    //     }
-    // }
-    // bgp *bgp_node = (bgp *)calloc(1, sizeof(bgp));
-    // bgp_node->pid = pid;
-    // bgp_node->process_name = strdup(fname);
-    // bgp_node->next = NULL;
-    // if (bgp_list == NULL)
-    // {
-    //     bgp_list = bgp_node;
-    // }
-    // else
-    // {
-    //     bgp_node->next = bgp_list;
-    //     bgp_list = bgp_node;
-    // }
-    // free(name);
-    // free(fname);
 }
 
 char *get_process_name(int pid)
 {
-    bgp *bgp_node = bgp_list;
+    bgp *bgp_node = bgp_start;
     while (bgp_node != NULL)
     {
         if (bgp_node->pid == pid)
@@ -68,12 +95,17 @@ char *get_process_name(int pid)
 
 void remove_process(int pid)
 {
-    bgp *bgp_node = bgp_list, *prev = bgp_list;
-    if (bgp_list->pid == pid)
+    bgp *bgp_node = bgp_start;
+    if (bgp_start == NULL)
+    {
+        fprintf(stderr, "\e[91;mNo BGP to remove\n\e[0m");
+    }
+    else if (bgp_start == bgp_end)
     {
         // free(bgp_list->process_name);
-        bgp *temp = bgp_list;
-        bgp_list = bgp_list->next;
+        bgp *temp = bgp_start;
+        bgp_start = NULL;
+        bgp_end = NULL;
         free(temp);
     }
     else
@@ -83,11 +115,25 @@ void remove_process(int pid)
             if (bgp_node->pid == pid)
             {
                 // free(bgp_node->process_name);
-                prev->next = bgp_node->next;
+                if (bgp_node->prev != NULL)
+                {
+                    (bgp_node->prev)->next = bgp_node->next;
+                }
+                else
+                {
+                    bgp_start = bgp_node->next;
+                }
+                if (bgp_node->next != NULL)
+                {
+                    bgp_node->next->prev = bgp_node->prev;
+                }
+                else
+                {
+                    bgp_end = bgp_node->prev;
+                }
                 free(bgp_node);
                 break;
             }
-            prev = bgp_node;
             bgp_node = bgp_node->next;
         }
     }
@@ -133,9 +179,16 @@ void history_command(his *node, int no)
     if (node != NULL && no > 0)
     {
         history_command(node->prev, no - 1);
-        printf("\e[0;32m%s\n", node->command);
+        if (colorCode == 0)
+        {
+            printf("\e[0;32m");
+        }
+        printf("%s\n", node->command);
+        if (colorCode == 0)
+        {
+            printf("\e[0m");
+        }
     }
-    printf("\e[0m");
 }
 
 void history_storage()

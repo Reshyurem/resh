@@ -36,7 +36,7 @@ char **parse(char string[], char delim[], int *no_of_parts)
 
 void freemem(char ***mem, int no)
 {
-    for (int i = 0; i <= no; i++)
+    for (int i = no; i >= 0; i--)
     {
         free((*mem)[i]);
     }
